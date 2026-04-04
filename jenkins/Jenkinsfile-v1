@@ -57,7 +57,7 @@ pipeline {
         stage('Deploy to Kubernetes') {
             steps {
                 echo 'Deploying v1 to Kubernetes...'
-                bat 'kubectl apply -f kubernetes/medistore-v1.yaml'
+                bat 'kubectl apply -f kubernetes/medistore-v1.yaml --validate=false'
                 bat 'kubectl rollout status deployment/medistore-v1 --timeout=60s'
             }
         }
