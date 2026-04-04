@@ -2,7 +2,7 @@ pipeline {
     agent any
 
     environment {
-        DOCKERHUB_USER = '23mis0160''
+        DOCKERHUB_USER = '23mis0160'
         IMAGE_NAME = "${DOCKERHUB_USER}/medistore"
         IMAGE_TAG = 'v3'
     }
