@@ -19,7 +19,7 @@ spec:
     spec:
       containers:
       - name: medistore-v1
-        image: your-dockerhub-username/medistore:v1
+        image: 23mis0160/medistore:v1
         ports:
         - containerPort: 80
         resources:
