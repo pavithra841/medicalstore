@@ -1,0 +1,75 @@
+pipeline {
+    agent any
+
+    environment {
+        DOCKERHUB_USER = 'your-dockerhub-username'
+        IMAGE_NAME = "${DOCKERHUB_USER}/medistore"
+        IMAGE_TAG = 'v3'
+    }
+
+    stages {
+        stage('Checkout') {
+            steps {
+                echo 'Checking out v3 branch...'
+                checkout scm
+            }
+        }
+
+        stage('Validate') {
+            steps {
+                echo 'Validating HTML and Dockerfile...'
+                sh 'test -f v3/index.html && echo "index.html OK"'
+                sh 'test -f v3/Dockerfile && echo "Dockerfile OK"'
+            }
+        }
+
+        stage('Build Docker Image') {
+            steps {
+                echo "Building Docker image: ${IMAGE_NAME}:${IMAGE_TAG}"
+                sh "docker build -t ${IMAGE_NAME}:${IMAGE_TAG} ./v3"
+            }
+        }
+
+        stage('Test Container') {
+            steps {
+                echo 'Running container smoke test...'
+                sh "docker run -d --name test-medistore-v3 -p 8083:80 ${IMAGE_NAME}:${IMAGE_TAG}"
+                sh 'sleep 5'
+                sh 'curl -f http://localhost:8083 || exit 1'
+                sh 'docker rm -f test-medistore-v3'
+                echo 'Smoke test passed!'
+            }
+        }
+
+        stage('Push to DockerHub') {
+            steps {
+                withCredentials([usernamePassword(
+                    credentialsId: 'dockerhub-credentials',
+                    usernameVariable: 'DOCKER_USER',
+                    passwordVariable: 'DOCKER_PASS'
+                )]) {
+                    sh 'echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin'
+                    sh "docker push ${IMAGE_NAME}:${IMAGE_TAG}"
+                }
+            }
+        }
+
+        stage('Deploy to Kubernetes') {
+            steps {
+                echo 'Deploying v3 to Kubernetes...'
+                sh "kubectl apply -f kubernetes/medistore-v3.yaml"
+                sh "kubectl rollout status deployment/medistore-v3 --timeout=60s"
+            }
+        }
+    }
+
+    post {
+        success {
+            echo "✅ MediStore v3 deployed successfully! Access at http://localhost:30083"
+        }
+        failure {
+            echo "❌ Pipeline failed. Check the logs above."
+            sh 'docker rm -f test-medistore-v3 || true'
+        }
+    }
+}

@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>MediStore v3 — Inventory Dashboard</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet"/>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --purple: #5a2d9e; --purple-light: #f0eaff; --purple-dark: #3a1a6e;
+      --accent: #f0a500; --bg: #f6f4fc; --white: #ffffff;
+      --text: #1e1530; --muted: #7a6e96; --border: #ddd6f0;
+      --green: #1a7a4a; --red: #c0392b; --orange: #e67e22;
+    }
+    body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+    header {
+      background: var(--purple); color: white; padding: 18px 32px;
+      display: flex; align-items: center; gap: 14px;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.15);
+    }
+    header .logo { font-family: 'DM Serif Display', serif; font-size: 1.7rem; }
+    header .version-badge {
+      background: var(--accent); color: #1e1530; font-size: 0.75rem;
+      font-weight: 600; padding: 3px 10px; border-radius: 20px; margin-left: auto;
+    }
+    header .subtitle { font-size: 0.9rem; opacity: 0.85; }
+    .container { max-width: 1100px; margin: 36px auto; padding: 0 20px; }
+    .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 28px; }
+    .stat-card {
+      background: white; border: 1px solid var(--border); border-radius: 12px;
+      padding: 20px; text-align: center;
+    }
+    .stat-card .val { font-family: 'DM Serif Display', serif; font-size: 2rem; color: var(--purple); }
+    .stat-card .lbl { font-size: 0.8rem; color: var(--muted); font-weight: 600; text-transform: uppercase; margin-top: 4px; }
+    .toolbar {
+      display: flex; gap: 12px; margin-bottom: 20px; flex-wrap: wrap; align-items: center;
+    }
+    .toolbar input, .toolbar select {
+      border: 1.5px solid var(--border); border-radius: 8px;
+      padding: 10px 14px; font-size: 0.9rem; font-family: 'DM Sans', sans-serif;
+      background: white; outline: none; color: var(--text);
+    }
+    .toolbar input:focus, .toolbar select:focus { border-color: var(--purple); }
+    .toolbar input { flex: 1; min-width: 180px; }
+    .export-btn {
+      background: var(--purple); color: white; border: none; border-radius: 8px;
+      padding: 10px 20px; font-weight: 600; cursor: pointer; font-family: 'DM Sans', sans-serif;
+      margin-left: auto;
+    }
+    table { width: 100%; border-collapse: collapse; background: white; border-radius: 14px; overflow: hidden; box-shadow: 0 2px 12px rgba(90,45,158,0.07); }
+    thead { background: var(--purple); color: white; }
+    th { padding: 14px 16px; text-align: left; font-size: 0.82rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; cursor: pointer; }
+    th:hover { background: var(--purple-dark); }
+    td { padding: 13px 16px; border-bottom: 1px solid var(--border); font-size: 0.9rem; }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: var(--purple-light); }
+    .badge {
+      font-size: 0.75rem; font-weight: 600; padding: 3px 10px; border-radius: 20px;
+    }
+    .badge.in-stock { background: #e8f5ee; color: #1a7a4a; }
+    .badge.low-stock { background: #fff3e0; color: #e67e22; }
+    .badge.out-of-stock { background: #fdecea; color: #c0392b; }
+    .pagination { display: flex; gap: 8px; justify-content: center; margin-top: 20px; }
+    .page-btn {
+      border: 1.5px solid var(--border); background: white; border-radius: 7px;
+      padding: 7px 14px; cursor: pointer; font-family: 'DM Sans', sans-serif; font-size: 0.9rem;
+    }
+    .page-btn.active { background: var(--purple); color: white; border-color: var(--purple); }
+    .empty { color: var(--muted); text-align: center; padding: 40px; font-size: 0.95rem; }
+    @media (max-width: 700px) {
+      .stats { grid-template-columns: repeat(2, 1fr); }
+      table { font-size: 0.8rem; }
+    }
+  </style>
+</head>
+<body>
+<header>
+  <div>
+    <div class="logo">🏥 MediStore</div>
+    <div class="subtitle">Medical Store Management</div>
+  </div>
+  <div class="version-badge">v3 — Inventory Dashboard</div>
+</header>
+
+<div class="container">
+  <div class="stats">
+    <div class="stat-card"><div class="val" id="s-total">0</div><div class="lbl">Total Items</div></div>
+    <div class="stat-card"><div class="val" id="s-instock">0</div><div class="lbl">In Stock</div></div>
+    <div class="stat-card"><div class="val" id="s-low">0</div><div class="lbl">Low Stock</div></div>
+    <div class="stat-card"><div class="val" id="s-out">0</div><div class="lbl">Out of Stock</div></div>
+  </div>
+
+  <div class="toolbar">
+    <input type="text" id="searchInput" placeholder="Search by name or category..." oninput="render()"/>
+    <select id="filterStatus" onchange="render()">
+      <option value="">All Status</option>
+      <option value="in-stock">In Stock</option>
+      <option value="low-stock">Low Stock</option>
+      <option value="out-of-stock">Out of Stock</option>
+    </select>
+    <select id="filterCat" onchange="render()">
+      <option value="">All Categories</option>
+      <option>Tablet</option><option>Capsule</option><option>Syrup</option>
+      <option>Injection</option><option>Ointment</option><option>Drops</option>
+      <option>Inhaler</option><option>Supplement</option>
+    </select>
+    <button class="export-btn" onclick="exportCSV()">⬇ Export CSV</button>
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th onclick="sortBy('name')">Name ↕</th>
+        <th onclick="sortBy('category')">Category ↕</th>
+        <th onclick="sortBy('qty')">Qty ↕</th>
+        <th onclick="sortBy('price')">Price ↕</th>
+        <th>Batch</th>
+        <th onclick="sortBy('expiry')">Expiry ↕</th>
+        <th>Status</th>
+      </tr>
+    </thead>
+    <tbody id="tableBody"></tbody>
+  </table>
+  <div class="pagination" id="pagination"></div>
+</div>
+
+<script>
+  const PAGE_SIZE = 8;
+  let currentPage = 1;
+  let sortKey = 'name', sortDir = 1;
+
+  function getInventory() { return JSON.parse(localStorage.getItem('medistore_inventory') || '[]'); }
+
+  function getStatus(qty) {
+    if (qty === 0) return 'out-of-stock';
+    if (qty <= 10) return 'low-stock';
+    return 'in-stock';
+  }
+  function getStatusLabel(s) {
+    return { 'in-stock': 'In Stock', 'low-stock': 'Low Stock', 'out-of-stock': 'Out of Stock' }[s];
+  }
+
+  function sortBy(key) {
+    if (sortKey === key) sortDir *= -1; else { sortKey = key; sortDir = 1; }
+    render();
+  }
+
+  function getFiltered() {
+    let inv = getInventory();
+    const q = document.getElementById('searchInput').value.toLowerCase();
+    const fs = document.getElementById('filterStatus').value;
+    const fc = document.getElementById('filterCat').value;
+    if (q) inv = inv.filter(m => m.name.toLowerCase().includes(q) || m.category.toLowerCase().includes(q));
+    if (fs) inv = inv.filter(m => getStatus(m.qty) === fs);
+    if (fc) inv = inv.filter(m => m.category === fc);
+    inv.sort((a, b) => {
+      let va = a[sortKey], vb = b[sortKey];
+      if (typeof va === 'string') va = va.toLowerCase(), vb = vb.toLowerCase();
+      return va < vb ? -sortDir : va > vb ? sortDir : 0;
+    });
+    return inv;
+  }
+
+  function updateStats(inv) {
+    document.getElementById('s-total').textContent = inv.length;
+    document.getElementById('s-instock').textContent = inv.filter(m => getStatus(m.qty) === 'in-stock').length;
+    document.getElementById('s-low').textContent = inv.filter(m => getStatus(m.qty) === 'low-stock').length;
+    document.getElementById('s-out').textContent = inv.filter(m => getStatus(m.qty) === 'out-of-stock').length;
+  }
+
+  function render() {
+    const inv = getFiltered();
+    updateStats(getInventory());
+    const total = Math.ceil(inv.length / PAGE_SIZE);
+    if (currentPage > total) currentPage = 1;
+    const page = inv.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+    const tbody = document.getElementById('tableBody');
+    if (!inv.length) {
+      tbody.innerHTML = '<tr><td colspan="7" class="empty">No medicines found.</td></tr>';
+      document.getElementById('pagination').innerHTML = ''; return;
+    }
+    tbody.innerHTML = page.map(m => {
+      const s = getStatus(m.qty);
+      return `<tr>
+        <td><strong>${m.name}</strong></td>
+        <td>${m.category}</td>
+        <td>${m.qty}</td>
+        <td>₹${m.price.toFixed(2)}</td>
+        <td>${m.batch}</td>
+        <td>${m.expiry}</td>
+        <td><span class="badge ${s}">${getStatusLabel(s)}</span></td>
+      </tr>`;
+    }).join('');
+    const pg = document.getElementById('pagination');
+    pg.innerHTML = Array.from({length: total}, (_, i) => i + 1).map(p =>
+      `<button class="page-btn ${p === currentPage ? 'active' : ''}" onclick="goPage(${p})">${p}</button>`
+    ).join('');
+  }
+
+  function goPage(p) { currentPage = p; render(); }
+
+  function exportCSV() {
+    const inv = getFiltered();
+    const rows = [['Name','Category','Qty','Price','Batch','Expiry','Status'],
+      ...inv.map(m => [m.name, m.category, m.qty, m.price, m.batch, m.expiry, getStatusLabel(getStatus(m.qty))])];
+    const csv = rows.map(r => r.join(',')).join('\n');
+    const a = document.createElement('a');
+    a.href = 'data:text/csv,' + encodeURIComponent(csv);
+    a.download = 'medistore-inventory.csv'; a.click();
+  }
+  render();
+</script>
+</body>
+</html>
