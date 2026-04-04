@@ -2,7 +2,7 @@ pipeline {
     agent any
 
     environment {
-        DOCKERHUB_USER = 'your-dockerhub-username'
+        DOCKERHUB_USER = '23mis0160'
         IMAGE_NAME = "${DOCKERHUB_USER}/medistore"
         IMAGE_TAG = 'v1'
     }
@@ -18,25 +18,25 @@ pipeline {
         stage('Validate') {
             steps {
                 echo 'Validating HTML and Dockerfile...'
-                sh 'test -f v1/index.html && echo "index.html OK"'
-                sh 'test -f v1/Dockerfile && echo "Dockerfile OK"'
+                bat 'if exist v1\\index.html (echo index.html OK) else (exit 1)'
+                bat 'if exist v1\\Dockerfile (echo Dockerfile OK) else (exit 1)'
             }
         }
 
         stage('Build Docker Image') {
             steps {
                 echo "Building Docker image: ${IMAGE_NAME}:${IMAGE_TAG}"
-                sh "docker build -t ${IMAGE_NAME}:${IMAGE_TAG} ./v1"
+                bat "docker build -t ${IMAGE_NAME}:${IMAGE_TAG} ./v1"
             }
         }
 
         stage('Test Container') {
             steps {
                 echo 'Running container smoke test...'
-                sh "docker run -d --name test-medistore-v1 -p 8081:80 ${IMAGE_NAME}:${IMAGE_TAG}"
-                sh 'sleep 5'
-                sh 'curl -f http://localhost:8081 || exit 1'
-                sh 'docker rm -f test-medistore-v1'
+                bat "docker run -d --name test-medistore-v1 -p 8081:80 ${IMAGE_NAME}:${IMAGE_TAG}"
+                bat 'ping -n 6 127.0.0.1 > nul'
+                bat 'curl -f http://localhost:8081 || exit 1'
+                bat 'docker rm -f test-medistore-v1'
                 echo 'Smoke test passed!'
             }
         }
@@ -48,8 +48,8 @@ pipeline {
                     usernameVariable: 'DOCKER_USER',
                     passwordVariable: 'DOCKER_PASS'
                 )]) {
-                    sh 'echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin'
-                    sh "docker push ${IMAGE_NAME}:${IMAGE_TAG}"
+                    bat "docker login -u %DOCKER_USER% -p %DOCKER_PASS%"
+                    bat "docker push ${IMAGE_NAME}:${IMAGE_TAG}"
                 }
             }
         }
@@ -57,19 +57,19 @@ pipeline {
         stage('Deploy to Kubernetes') {
             steps {
                 echo 'Deploying v1 to Kubernetes...'
-                sh "kubectl apply -f kubernetes/medistore-v1.yaml"
-                sh "kubectl rollout status deployment/medistore-v1 --timeout=60s"
+                bat 'kubectl apply -f kubernetes/medistore-v1.yaml'
+                bat 'kubectl rollout status deployment/medistore-v1 --timeout=60s'
             }
         }
     }
 
     post {
         success {
-            echo "✅ MediStore v1 deployed successfully! Access at http://localhost:30081"
+            echo '✅ MediStore v1 deployed! Access at http://localhost:30081'
         }
         failure {
-            echo "❌ Pipeline failed. Check the logs above."
-            sh 'docker rm -f test-medistore-v1 || true'
+            echo '❌ Pipeline failed. Check the logs above.'
+            bat 'docker rm -f test-medistore-v1 || exit 0'
         }
     }
 }
