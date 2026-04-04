@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>MediStore v1 — Add Medicine</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet"/>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --green: #1a7a4a; --green-light: #e8f5ee; --green-dark: #125235;
+      --accent: #f0a500; --bg: #f7f9f7; --white: #ffffff;
+      --text: #1c2b22; --muted: #6b7f72; --border: #d0e2d8;
+      --red: #c0392b;
+    }
+    body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+    header {
+      background: var(--green); color: white; padding: 18px 32px;
+      display: flex; align-items: center; gap: 14px;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.15);
+    }
+    header .logo { font-family: 'DM Serif Display', serif; font-size: 1.7rem; letter-spacing: 0.5px; }
+    header .version-badge {
+      background: var(--accent); color: #1c2b22; font-size: 0.75rem;
+      font-weight: 600; padding: 3px 10px; border-radius: 20px; margin-left: auto;
+    }
+    header .subtitle { font-size: 0.9rem; opacity: 0.85; }
+    .container { max-width: 680px; margin: 40px auto; padding: 0 20px; }
+    h2 { font-family: 'DM Serif Display', serif; font-size: 1.6rem; color: var(--green-dark); margin-bottom: 6px; }
+    .form-card {
+      background: var(--white); border-radius: 16px;
+      padding: 36px; box-shadow: 0 4px 24px rgba(26,122,74,0.08);
+      border: 1px solid var(--border);
+    }
+    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    .form-group { display: flex; flex-direction: column; gap: 6px; }
+    .form-group.full { grid-column: 1 / -1; }
+    label { font-size: 0.82rem; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; }
+    input, select {
+      border: 1.5px solid var(--border); border-radius: 8px;
+      padding: 11px 14px; font-size: 0.95rem; font-family: 'DM Sans', sans-serif;
+      color: var(--text); background: var(--bg); transition: border-color 0.2s;
+      outline: none;
+    }
+    input:focus, select:focus { border-color: var(--green); background: white; }
+    .btn {
+      width: 100%; padding: 14px; background: var(--green); color: white;
+      border: none; border-radius: 10px; font-size: 1rem; font-weight: 600;
+      cursor: pointer; margin-top: 10px; transition: background 0.2s, transform 0.1s;
+      font-family: 'DM Sans', sans-serif;
+    }
+    .btn:hover { background: var(--green-dark); }
+    .btn:active { transform: scale(0.98); }
+    .toast {
+      display: none; background: var(--green); color: white;
+      padding: 14px 20px; border-radius: 10px; margin-top: 20px;
+      text-align: center; font-weight: 500; animation: fadeIn 0.3s ease;
+    }
+    .toast.error { background: var(--red); }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+    .medicine-list { margin-top: 36px; }
+    .medicine-list h3 { font-family: 'DM Serif Display', serif; font-size: 1.2rem; color: var(--green-dark); margin-bottom: 14px; }
+    .med-item {
+      background: white; border: 1px solid var(--border); border-radius: 10px;
+      padding: 14px 18px; margin-bottom: 10px; display: flex; justify-content: space-between;
+      align-items: center; font-size: 0.9rem;
+    }
+    .med-item .name { font-weight: 600; color: var(--text); }
+    .med-item .meta { color: var(--muted); font-size: 0.82rem; margin-top: 2px; }
+    .med-item .price { color: var(--green); font-weight: 600; font-size: 1rem; }
+    .empty { color: var(--muted); text-align: center; padding: 24px; font-size: 0.9rem; }
+  </style>
+</head>
+<body>
+<header>
+  <div>
+    <div class="logo">🏥 MediStore</div>
+    <div class="subtitle">Medical Store Management</div>
+  </div>
+  <div class="version-badge">v1 — Add Medicine</div>
+</header>
+
+<div class="container">
+  <h2 style="margin-bottom:20px;">Add New Medicine</h2>
+  <div class="form-card">
+    <div class="form-grid">
+      <div class="form-group full">
+        <label>Medicine Name</label>
+        <input type="text" id="medName" placeholder="e.g. Paracetamol 500mg"/>
+      </div>
+      <div class="form-group">
+        <label>Category</label>
+        <select id="medCategory">
+          <option value="">Select category</option>
+          <option>Tablet</option><option>Capsule</option><option>Syrup</option>
+          <option>Injection</option><option>Ointment</option><option>Drops</option>
+          <option>Inhaler</option><option>Supplement</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Quantity</label>
+        <input type="number" id="medQty" placeholder="e.g. 100" min="0"/>
+      </div>
+      <div class="form-group">
+        <label>Price (₹)</label>
+        <input type="number" id="medPrice" placeholder="e.g. 45.00" min="0" step="0.01"/>
+      </div>
+      <div class="form-group">
+        <label>Batch Number</label>
+        <input type="text" id="medBatch" placeholder="e.g. BT20240301"/>
+      </div>
+      <div class="form-group">
+        <label>Expiry Date</label>
+        <input type="date" id="medExpiry"/>
+      </div>
+    </div>
+    <button class="btn" onclick="addMedicine()">+ Add Medicine to Inventory</button>
+    <div class="toast" id="toast"></div>
+  </div>
+
+  <div class="medicine-list">
+    <h3>Recently Added</h3>
+    <div id="medList"></div>
+  </div>
+</div>
+
+<script>
+  function getInventory() { return JSON.parse(localStorage.getItem('medistore_inventory') || '[]'); }
+  function saveInventory(data) { localStorage.setItem('medistore_inventory', JSON.stringify(data)); }
+
+  function showToast(msg, isError = false) {
+    const t = document.getElementById('toast');
+    t.textContent = msg; t.className = 'toast' + (isError ? ' error' : '');
+    t.style.display = 'block';
+    setTimeout(() => t.style.display = 'none', 3000);
+  }
+
+  function addMedicine() {
+    const name = document.getElementById('medName').value.trim();
+    const category = document.getElementById('medCategory').value;
+    const qty = document.getElementById('medQty').value;
+    const price = document.getElementById('medPrice').value;
+    const batch = document.getElementById('medBatch').value.trim();
+    const expiry = document.getElementById('medExpiry').value;
+
+    if (!name || !category || !qty || !price || !batch || !expiry) {
+      showToast('⚠️ Please fill in all fields.', true); return;
+    }
+
+    const med = { id: Date.now(), name, category, qty: parseInt(qty), price: parseFloat(price), batch, expiry };
+    const inv = getInventory(); inv.unshift(med); saveInventory(inv);
+    showToast('✅ ' + name + ' added successfully!');
+    document.querySelectorAll('input').forEach(i => i.value = '');
+    document.getElementById('medCategory').value = '';
+    renderList();
+  }
+
+  function renderList() {
+    const inv = getInventory();
+    const el = document.getElementById('medList');
+    if (!inv.length) { el.innerHTML = '<div class="empty">No medicines added yet.</div>'; return; }
+    el.innerHTML = inv.slice(0, 5).map(m => `
+      <div class="med-item">
+        <div>
+          <div class="name">${m.name}</div>
+          <div class="meta">${m.category} · Batch: ${m.batch} · Exp: ${m.expiry} · Qty: ${m.qty}</div>
+        </div>
+        <div class="price">₹${m.price.toFixed(2)}</div>
+      </div>`).join('');
+  }
+  renderList();
+</script>
+</body>
+</html>
